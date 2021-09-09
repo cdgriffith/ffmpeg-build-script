@@ -298,10 +298,6 @@ if ! command_exists "curl"; then
   exit 1
 fi
 
-if ! command_exists "libtoolize"; then
-  echo "libtool not installed. libzimg (z.lib) will not be available."
-fi
-
 if ! command_exists "cargo"; then
   echo "cargo not installed. rav1e will not be available."
 fi
@@ -382,9 +378,9 @@ if command_exists "python"; then
     execute ./waf configure --prefix="${WORKSPACE}" --static --no-shared --no-utils
     execute ./waf
     execute ./waf install
-    CFLAGS+=" -I$WORKSPACE/include/lilv-0"
     build_done "lilv" "0.24.12"
   fi
+  CFLAGS+=" -I$WORKSPACE/include/lilv-0"
 
   CONFIGURE_OPTIONS+=("--enable-lv2")
 fi
@@ -410,9 +406,9 @@ if build "zlib" "1.2.11"; then
   execute ./configure --static --prefix="${WORKSPACE}"
   execute make -j $MJOBS
   execute make install
-  LDFLAGS+=" -L/zlib/lib"
   build_done "zlib" "1.2.11"
 fi
+LDFLAGS+=" -L/zlib/lib"
 
 if $NONFREE_AND_GPL; then
   if build "openssl" "1.1.1l"; then
@@ -440,6 +436,7 @@ fi
 
 if ! $MACOS_M1; then
   if build "svtav1" $(date -I); then
+    execute rm -f "${PACKAGES}/SVT-AV1-master.tar.gz"
     download "https://gitlab.com/AOMediaCodec/SVT-AV1/-/archive/master/SVT-AV1-master.tar.gz"
     cd Build/linux || exit
     execute cmake -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DENABLE_SHARED=off -DBUILD_SHARED_LIBS=OFF ../.. -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
@@ -667,6 +664,8 @@ if build "libpng" "1.6.37"; then
   execute make install
   build_done "libpng" "1.6.37"
 fi
+# libwebp can fail to compile on Ubuntu if these flags were left set to CFLAGS
+CPPFLAGS=
 
 ##
 ## image library
@@ -685,17 +684,26 @@ if build "libwebp" "1.2.0"; then
 fi
 CONFIGURE_OPTIONS+=("--enable-libwebp")
 
-if command_exists "libtoolize"; then
-  if build "zimg" "3.0.3"; then
-    download "https://github.com/sekrit-twc/zimg/archive/refs/tags/release-3.0.3.tar.gz"
-    execute ./autogen.sh
-    execute ./configure --prefix="${WORKSPACE}"
-    execute make -j $MJOBS
-    execute make install
-    build_done "zimg" "3.0.3"
-  fi
-  CONFIGURE_OPTIONS+=("--enable-libzimg")
+if build "libtool" "2.4.6"; then
+  download "https://ftpmirror.gnu.org/libtool/libtool-2.4.6.tar.gz"
+  execute ./configure --prefix="${WORKSPACE}" --enable-static --disable-shared
+  execute make -j $MJOBS
+  execute make install
+  build_done "libtool" "2.4.6"
 fi
+
+if build "zimg" "3.0.3"; then
+  download "https://github.com/sekrit-twc/zimg/archive/refs/tags/release-3.0.3.tar.gz" "zimg-3.0.3.tar.gz" "zimg"
+  cd zimg-release-3.0.3 || exit
+  execute ${WORKSPACE}/bin/libtoolize
+  execute ./autogen.sh
+  execute ./configure --prefix="${WORKSPACE}" --enable-static --disable-shared
+  execute make -j $MJOBS
+  execute make install
+  build_done "zimg" "3.0.3"
+fi
+CONFIGURE_OPTIONS+=("--enable-libzimg")
+
 
 ##
 ## other library
@@ -827,7 +835,7 @@ if [[ "$AUTOINSTALL" == "yes" ]]; then
   else
     cp "$WORKSPACE/bin/ffmpeg" "$INSTALL_FOLDER/ffmpeg"
     cp "$WORKSPACE/bin/ffprobe" "$INSTALL_FOLDER/ffprobe"
-    sudo cp "$WORKSPACE/bin/ffplay" "$INSTALL_FOLDER/ffplay"
+    cp "$WORKSPACE/bin/ffplay" "$INSTALL_FOLDER/ffplay"
     echo "Done. FFmpeg is now installed to your system."
   fi
 elif [[ ! "$SKIPINSTALL" == "yes" ]]; then
