@@ -403,6 +403,14 @@ if build "zlib" "1.2.11"; then
 fi
 LDFLAGS+=" -L/zlib/lib"
 
+if build "m4" "1.4.19"; then
+  download "https://ftp.gnu.org/gnu/m4/m4-1.4.19.tar.gz"
+  execute ./configure --prefix="${WORKSPACE}"
+  execute make -j $MJOBS
+  execute make install
+  build_done "m4" "1.4.19"
+fi
+
 if build "autoconf" "2.71"; then
   download "https://ftp.gnu.org/gnu/autoconf/autoconf-2.71.tar.gz"
   execute ./configure --prefix="${WORKSPACE}"
@@ -417,14 +425,6 @@ if build "automake" "1.16.4"; then
   execute make -j $MJOBS
   execute make install
   build_done "automake" "1.16.4"
-fi
-
-if build "m4" "1.4.19"; then
-  download "https://ftp.gnu.org/gnu/m4/m4-1.4.19.tar.gz"
-  execute ./configure --prefix="${WORKSPACE}"
-  execute make -j $MJOBS
-  execute make install
-  build_done "m4" "1.4.19"
 fi
 
 if build "libtool" "2.4.6"; then
