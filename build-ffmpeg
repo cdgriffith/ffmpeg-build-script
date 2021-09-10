@@ -91,22 +91,15 @@ download() {
 
   make_dir "$DOWNLOAD_PATH/$TARGETDIR"
 
-  if [[ $DOWNLOAD_FILE == *.zip ]]; then
-    if ! unzip "$DOWNLOAD_PATH/$DOWNLOAD_FILE" -d "$DOWNLOAD_PATH/$TARGETDIR" 2>/dev/null >/dev/null; then
-        echo "Failed to extract $DOWNLOAD_FILE";
-        exit 1;
+  if [ -n "$3" ]; then
+    if ! tar -xvf "$DOWNLOAD_PATH/$DOWNLOAD_FILE" -C "$DOWNLOAD_PATH/$TARGETDIR" 2>/dev/null >/dev/null; then
+      echo "Failed to extract $DOWNLOAD_FILE"
+      exit 1
     fi
   else
-    if [ -n "$3" ]; then
-      if ! tar -xvf "$DOWNLOAD_PATH/$DOWNLOAD_FILE" -C "$DOWNLOAD_PATH/$TARGETDIR" 2>/dev/null >/dev/null; then
-        echo "Failed to extract $DOWNLOAD_FILE"
-        exit 1
-      fi
-    else
-      if ! tar -xvf "$DOWNLOAD_PATH/$DOWNLOAD_FILE" -C "$DOWNLOAD_PATH/$TARGETDIR" --strip-components 1 2>/dev/null >/dev/null; then
-        echo "Failed to extract $DOWNLOAD_FILE"
-        exit 1
-      fi
+    if ! tar -xvf "$DOWNLOAD_PATH/$DOWNLOAD_FILE" -C "$DOWNLOAD_PATH/$TARGETDIR" --strip-components 1 2>/dev/null >/dev/null; then
+      echo "Failed to extract $DOWNLOAD_FILE"
+      exit 1
     fi
   fi
 
@@ -410,6 +403,31 @@ if build "zlib" "1.2.11"; then
 fi
 LDFLAGS+=" -L/zlib/lib"
 
+if build "libtool" "2.4.6"; then
+  download "https://ftpmirror.gnu.org/libtool/libtool-2.4.6.tar.gz"
+  execute ./configure --prefix="${WORKSPACE}" --enable-static --disable-shared
+  execute make -j $MJOBS
+  execute make install
+  build_done "libtool" "2.4.6"
+fi
+
+if build "automake" "1.16.4"; then
+  download "https://ftp.gnu.org/gnu/automake/automake-1.16.4.tar.gz"
+  execute ./configure --prefix="${WORKSPACE}"
+  execute make -j $MJOBS
+  execute make install
+  build_done "automake" "1.16.4"
+fi
+
+if build "m4" "1.4.19"; then
+  download "https://ftp.gnu.org/gnu/m4/m4-1.4.19.tar.gz"
+  execute ./configure --prefix="${WORKSPACE}"  --enable-static --disable-shared
+  execute make -j $MJOBS
+  execute make install
+  build_done "m4" "1.4.19"
+fi
+
+
 if $NONFREE_AND_GPL; then
   if build "openssl" "1.1.1l"; then
     download "https://www.openssl.org/source/openssl-1.1.1l.tar.gz"
@@ -684,19 +702,11 @@ if build "libwebp" "1.2.0"; then
 fi
 CONFIGURE_OPTIONS+=("--enable-libwebp")
 
-if build "libtool" "2.4.6"; then
-  download "https://ftpmirror.gnu.org/libtool/libtool-2.4.6.tar.gz"
-  execute ./configure --prefix="${WORKSPACE}" --enable-static --disable-shared
-  execute make -j $MJOBS
-  execute make install
-  build_done "libtool" "2.4.6"
-fi
-
 if build "zimg" "3.0.3"; then
   download "https://github.com/sekrit-twc/zimg/archive/refs/tags/release-3.0.3.tar.gz" "zimg-3.0.3.tar.gz" "zimg"
   cd zimg-release-3.0.3 || exit
-  execute ${WORKSPACE}/bin/libtoolize
-  execute ./autogen.sh
+  execute ${WORKSPACE}/bin/libtoolize -i -f -q
+  execute ./autogen.sh --prefix="${WORKSPACE}"
   execute ./configure --prefix="${WORKSPACE}" --enable-static --disable-shared
   execute make -j $MJOBS
   execute make install
@@ -771,18 +781,14 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
     fi
   fi
 
-  # Only build AMF support if the amdgpu drivers are in use on the system
-  lspci -v | grep "Kernel driver in use: amdgpu" > /dev/null
-  if [ $? -eq 0 ]; then
-    if build "amf" "1.4.21.0"; then
-      download "https://github.com/GPUOpen-LibrariesAndSDKs/AMF/releases/download/v.1.4.21/AMF_SDK_1.4.21.0-2021-07-20.zip"
-      execute rm -rf ${WORKSPACE}/include/AMF
-      execute mkdir -p ${WORKSPACE}/include/AMF
-      execute cp -r ${PACKAGES}/AMF_SDK_1.4.21.0-2021-07-20/AMF_SDK_1.4.21.0/amf/public/include/* ${WORKSPACE}/include/AMF/
-      build_done "amf" "1.4.21.0"
-    fi
-    CONFIGURE_OPTIONS+=("--enable-amf")
+  if build "amf" "1.4.21.0"; then
+    download "https://github.com/GPUOpen-LibrariesAndSDKs/AMF/archive/refs/tags/v.1.4.21.tar.gz" "AMF-1.4.21.tar.gz" "AMF-1.4.21"
+    execute rm -rf ${WORKSPACE}/include/AMF
+    execute mkdir -p ${WORKSPACE}/include/AMF
+    execute cp -r ${PACKAGES}/AMF-1.4.21/AMF-v.1.4.21/amf/public/include/* ${WORKSPACE}/include/AMF/
+    build_done "amf" "1.4.21.0"
   fi
+  CONFIGURE_OPTIONS+=("--enable-amf")
 fi
 
 ##
