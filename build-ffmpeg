@@ -403,14 +403,6 @@ if build "zlib" "1.2.11"; then
 fi
 LDFLAGS+=" -L/zlib/lib"
 
-if build "libtool" "2.4.6"; then
-  download "https://ftpmirror.gnu.org/libtool/libtool-2.4.6.tar.gz"
-  execute ./configure --prefix="${WORKSPACE}" --enable-static --disable-shared
-  execute make -j $MJOBS
-  execute make install
-  build_done "libtool" "2.4.6"
-fi
-
 if build "automake" "1.16.4"; then
   download "https://ftp.gnu.org/gnu/automake/automake-1.16.4.tar.gz"
   execute ./configure --prefix="${WORKSPACE}"
@@ -427,6 +419,13 @@ if build "m4" "1.4.19"; then
   build_done "m4" "1.4.19"
 fi
 
+if build "libtool" "2.4.6"; then
+  download "https://ftpmirror.gnu.org/libtool/libtool-2.4.6.tar.gz"
+  execute ./configure --prefix="${WORKSPACE}" --enable-static --disable-shared
+  execute make -j $MJOBS
+  execute make install
+  build_done "libtool" "2.4.6"
+fi
 
 if $NONFREE_AND_GPL; then
   if build "openssl" "1.1.1l"; then
