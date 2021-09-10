@@ -507,11 +507,38 @@ fi
 
 if $NONFREE_AND_GPL; then
   if build "x265" "3.5"; then
-    download "https://github.com/videolan/x265/archive/Release_3.5.tar.gz" "x265-3.5.tar.gz"
+    download "https://bitbucket.org/multicoreware/x265_git/downloads/x265_3.5.tar.gz"
     cd build/linux || exit
-
-    execute cmake -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DHIGH_BIT_DEPTH=ON -DENABLE_HDR10_PLUS=ON -DENABLE_SHARED=off -DBUILD_SHARED_LIBS=OFF ../../source
+    mkdir -p 8bit 10bit 12bit || exit
+    COMMON_CONFIG="-DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DCMAKE_BUILD_TYPE=Release -DENABLE_SHARED=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_ASM_NASM_FLAGS=-w-macro-params-legacy"
+    cd 12bit || exit
+    execute cmake "${COMMON_CONFIG}" -DHIGH_BIT_DEPTH=ON -DEXPORT_C_API=OFF -DENABLE_HDR10_PLUS=ON -DMAIN12=ON ../../../source
     execute make -j $MJOBS
+
+    cd ../10bit || exit
+    execute cmake "${COMMON_CONFIG}" -DHIGH_BIT_DEPTH=ON -DEXPORT_C_API=OFF -DENABLE_HDR10_PLUS=ON  ../../../source
+    execute make -j $MJOBS
+
+    cd ../8bit || exit
+    ln -sf ../10bit/libx265.a libx265_main10.a || exit
+    ln -sf ../12bit/libx265.a libx265_main12.a || exit
+    execute cmake "${COMMON_CONFIG}" -DEXTRA_LIB="x265_main10.a;x265_main12.a" -DEXTRA_LINK_FLAGS=-L. -DLINKED_10BIT=ON -DLINKED_12BIT=ON  ../../../source
+    execute  make -j $MJOBS
+    mv libx265.a libx265_main.a || exit
+
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      execute libtool -static -o libx265.a libx265_main.a libx265_main10.a libx265_main12.a 2>/dev/null
+    else
+      execute ar -M <<EOF
+CREATE libx265.a
+ADDLIB libx265_main.a
+ADDLIB libx265_main10.a
+ADDLIB libx265_main12.a
+SAVE
+END
+EOF
+    fi
+
     execute make install
 
     if [ -n "$LDEXEFLAGS" ]; then
