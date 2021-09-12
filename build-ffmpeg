@@ -527,13 +527,14 @@ if $NONFREE_AND_GPL; then
     mv libx265.a libx265_main.a
 
     if [[ "$OSTYPE" == "darwin"* ]]; then
-      execute "${MACOS_LIBTOOL}" -static -o libx265.a libx265_main.a libx265_main10.a libx265_main12.a 2>/dev/null
+      execute "${MACOS_LIBTOOL}" -static -o libx265.a libx265_main.a libx265_main10.a libx265_main12.a libhdr10plus.a 2>/dev/null
     else
       execute ar -M <<EOF
 CREATE libx265.a
 ADDLIB libx265_main.a
 ADDLIB libx265_main10.a
 ADDLIB libx265_main12.a
+ADDLIB libhdr10plus.a
 SAVE
 END
 EOF
@@ -848,15 +849,15 @@ download "https://github.com/FFmpeg/FFmpeg/archive/refs/heads/release/4.4.tar.gz
   --pkg-config-flags="--static" \
   --prefix="${WORKSPACE}"
 
-execute make -j $MJOBS
-execute make install
+# execute make -j $MJOBS
+# execute make install
 
 INSTALL_FOLDER="/usr/bin"
 if [[ "$OSTYPE" == "darwin"* ]]; then
   INSTALL_FOLDER="/usr/local/bin"
 fi
 
-verify_binary_type
+# verify_binary_type
 
 echo ""
 echo "Building done. The following binaries can be found here:"
